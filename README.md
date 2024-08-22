@@ -1,3 +1,3 @@
 # PBR Demo
 
-![PBR Chessboard](assets/chessboard.jpg.jpg)
+![PBR Chessboard](assets/chessboard.jpg)
