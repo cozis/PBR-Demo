@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+		"*.h": "cpp",
+		"cmath": "cpp",
+		"deque": "cpp",
+		"string": "cpp",
+		"vector": "cpp",
+		"random": "cpp",
+		"array": "cpp",
+		"string_view": "cpp"
+	}
+}
