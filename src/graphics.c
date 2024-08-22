@@ -6,6 +6,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "utils.h"
 #include "mesh.h"
 #include "camera.h"
 #include "vector.h"
@@ -16,6 +17,9 @@ typedef struct {
     unsigned int vbo;
     int num_vertices;
 } GPUMeshBuffer;
+
+#define MAX_MESH_BUFFERS 128
+static GPUMeshBuffer mesh_buffers[MAX_MESH_BUFFERS];
 
 #define SHADOW_WIDTH  1024
 #define SHADOW_HEIGHT 1024
@@ -38,38 +42,7 @@ static unsigned int shader_program;
 static unsigned int shadow_program;
 static unsigned int skybox_program;
 
-static GPUMeshBuffer sphere_buffer;
-static GPUMeshBuffer cube_buffer;
-
 static GLFWwindow *window_;
-
-static char *load_file(const char *file, size_t *size)
-{
-    FILE *stream = fopen(file, "rb");
-    if (stream == NULL) return NULL;
-
-    fseek(stream, 0, SEEK_END);
-    long size2 = ftell(stream);
-    fseek(stream, 0, SEEK_SET);
-
-    char *dst = (char*) malloc(size2+1);
-    if (dst == NULL) {
-        fclose(stream);
-        return NULL;
-    }
-
-    fread(dst, 1, size2, stream);
-    if (ferror(stream)) {
-        free(dst);
-        fclose(stream);
-        return NULL;
-    }
-    dst[size2] = '\0';
-
-    fclose(stream);
-    if (size) *size = size2;
-    return dst;
-}
 
 static unsigned int
 compile_shader(const char *vertex_file,
@@ -205,6 +178,33 @@ static GPUMeshBuffer create_gpu_mesh_buffer(VertexArray vertices)
     buffer.num_vertices = vertices.size;
 
     return buffer;
+}
+
+ModelID load_3d_model(const char *file)
+{
+	// Look for a free struct
+	int i = 0;
+	while (i < MAX_MESH_BUFFERS && mesh_buffers[i].num_vertices != 0)
+		i++;
+	if (i == MAX_MESH_BUFFERS)
+		return MODEL_INVALID; // No free structs
+
+	VertexArray vertices;
+	if (!load_mesh_from_file(file, &vertices))
+		return MODEL_INVALID;
+
+	mesh_buffers[i] = create_gpu_mesh_buffer(vertices);
+	free(vertices.data);
+
+	assert(mesh_buffers[i].num_vertices > 0);
+	return i+1;
+}
+
+void free_3d_model(ModelID id)
+{
+	if (id == 0 || id == MODEL_SPHERE || id == MODEL_CUBE)
+		return;
+	// TODO: Free mesh_buffers[id-1]
 }
 
 static void draw_mesh_for_shadow_map(GPUMeshBuffer buffer, Matrix4 model)
@@ -351,13 +351,13 @@ void init_graphics(void *window)
 
     {
         VertexArray vertices = make_sphere_mesh(0.5);
-        sphere_buffer = create_gpu_mesh_buffer(vertices);
+        mesh_buffers[MODEL_SPHERE-1] = create_gpu_mesh_buffer(vertices);
 		free(vertices.data);
     }
 
 	{
         VertexArray vertices = make_cube_mesh();
-        cube_buffer = create_gpu_mesh_buffer(vertices);
+        mesh_buffers[MODEL_CUBE-1] = create_gpu_mesh_buffer(vertices);
 		free(vertices.data);
     }
 
@@ -588,7 +588,7 @@ void init_graphics(void *window)
 
     unsigned int depth_render_buffer;
 
-    glEnable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
     //glEnable(GL_DEPTH_TEST);
@@ -597,9 +597,9 @@ void init_graphics(void *window)
 }
 
 typedef struct {
-	GPUMeshBuffer buffer;
-	Matrix4       model;
-	Material      mat;
+	ModelID  model_id;
+	Matrix4  model;
+	Material mat;
 } DrawCommand;
 
 #define COMMAND_QUEUE_SIZE 1024
@@ -616,9 +616,9 @@ static void clear_commands(void)
 static void apply_single_command(DrawCommand command, bool shadow_map)
 {
 	if (!shadow_map)
-		draw_mesh(command.buffer, command.model, command.mat);
+		draw_mesh(mesh_buffers[command.model_id-1], command.model, command.mat);
 	else
-		draw_mesh_for_shadow_map(command.buffer, command.model);
+		draw_mesh_for_shadow_map(mesh_buffers[command.model_id-1], command.model);
 }
 
 static void apply_commands(bool shadow_map)
@@ -637,20 +637,27 @@ static void push_command(DrawCommand command)
 	command_queue_used++;
 }
 
+void draw_model(ModelID id, Vector3 pos, Vector3 scale, Vector3 rotate, Material mat)
+{
+	if (id == 0)
+		return;
+	Matrix4 model = identity_matrix();
+	model = dotm(model, translate_matrix(pos, 1));
+	model = dotm(model, scale_matrix(scale));
+	model = dotm(model, rotate_matrix_x(rotate.x));
+	model = dotm(model, rotate_matrix_y(rotate.y));
+	model = dotm(model, rotate_matrix_z(rotate.z));
+	push_command((DrawCommand) {.model_id = id, .model = model, .mat = mat});
+}
+
 void draw_sphere(float x, float y, float z, float radius, Material mat)
 {
-	Matrix4 model = identity_matrix();
-	model = dotm(model, translate_matrix((Vector3) {x, y, z}, 1));
-	model = dotm(model, scale_matrix((Vector3) {radius, radius, radius}));
-	push_command((DrawCommand) {.buffer = sphere_buffer, .model = model, .mat = mat});
+	draw_model(MODEL_SPHERE, (Vector3) {x, y, z}, (Vector3) {radius, radius, radius}, (Vector3) {0, 0, 0}, mat);
 }
 
 void draw_cube(float x, float y, float z, float w, float h, float d, Material mat)
 {
-	Matrix4 model = identity_matrix();
-	model = dotm(model, translate_matrix((Vector3) {x, y, z}, 1));
-	model = dotm(model, scale_matrix((Vector3) {w, h, d}));
-	push_command((DrawCommand) {.buffer = cube_buffer, .model = model, .mat = mat});
+	draw_model(MODEL_CUBE, (Vector3) {x, y, z}, (Vector3) {w, h, d}, (Vector3) {0, 0, 0}, mat);
 }
 
 static Vector3 light_color = {1, 1, 1};
@@ -662,10 +669,23 @@ void set_light(Vector3 dir, Vector3 color)
 	light_color = color;
 }
 
+static bool environment = true;
+void show_environment(bool yes)
+{
+	environment = yes;
+}
+
+static Vector3 clear_color = {1, 1, 1};
+
+void set_clear_color(Vector3 color)
+{
+	clear_color = color;
+}
+
 void update_graphics(void)
 {
 	// Just an approximation for directional lighting
-	Vector3 light_pos = scale(light_dir, 8);
+	Vector3 light_pos = scale(light_dir, 50);
 
 	/*
 	 * First render to depth map
@@ -677,13 +697,11 @@ void update_graphics(void)
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		Matrix4 view = lookat_matrix(light_pos, (Vector3) {0, 0, 0}, (Vector3) {0, 1, 0});
-		Matrix4 projection = ortho_matrix(-2, 18, -10, 10, 1, 20);
+		Matrix4 projection = ortho_matrix(-15, 15, -20, 10, 1, 100);
 		light_space_matrix = dotm(projection, view);
 
 		glUseProgram(shadow_program);
 		set_uniform_m4(shadow_program, "light_space_matrix", light_space_matrix);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, depth_map);
 
 		apply_commands(true);
 
@@ -693,8 +711,7 @@ void update_graphics(void)
 	int w, h;
 	glfwGetWindowSize(window_, &w, &h);
 	glViewport(0, 0, w, h);
-
-	glClearColor(0.2f, 0.0f, 0.0f, 1.0f);
+	glClearColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
 	glClearStencil(0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -703,35 +720,38 @@ void update_graphics(void)
 
 	{
 		glUseProgram(shader_program);
-		set_uniform_v3(shader_program, "lightDir", light_dir);
+
+		set_uniform_v3(shader_program, "lightDir",   light_dir);
 		set_uniform_v3(shader_program, "lightColor", light_color);
-		set_uniform_v3(shader_program, "viewPos", get_camera_pos());
-		set_uniform_i(shader_program, "irradianceMap", 0);
-		set_uniform_i(shader_program, "prefilterMap", 1);
-		set_uniform_i(shader_program, "brdfLUT", 2);
+		set_uniform_v3(shader_program, "viewPos",    get_camera_pos());
+
 		set_uniform_m4(shader_program, "view", view);
 		set_uniform_m4(shader_program, "projection", projection);
 		set_uniform_m4(shader_program, "light_space_matrix", light_space_matrix);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+		set_uniform_i(shader_program, "irradianceMap", 0);
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+		set_uniform_i(shader_program, "prefilterMap", 1);
 
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+		set_uniform_i(shader_program, "brdfLUT", 2);
 
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, depth_map);
+		set_uniform_i(shader_program, "shadow_map", 3);
 
 		apply_commands(false);
 	}
 
-	{
+	if (environment) {
 		glUseProgram(background_program);
 		set_uniform_m4(background_program, "view", view);
-		glUniform1i(glGetUniformLocation(background_program, "environmentMap"), 0);
+		set_uniform_i(background_program, "environmentMap", 0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
 		//glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);

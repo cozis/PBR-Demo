@@ -191,46 +191,6 @@ Matrix4 transpose(Matrix4 m)
 	return r;
 }
 
-/*
-	| m00 m01 m02 m03 |   | vx |   | m00*vx + m01*vy + m02*vz + m03*vw |
-	| m10 m11 m12 m13 | * | vy | = | m10*vx + m11*vy + m12*vz + m13*vw |
-	| m20 m21 m22 m23 |   | vz |   | m20*vx + m21*vy + m22*vz + m23*vw |
-	| m30 m31 m32 m33 |   | vw |   | m30*vx + m31*vy + m32*vz + m33*vw |
-
-	                  | m00 m01 m02 m03 |   | vx*m00 + vy*m10 + vz*m20 + vw * m30 |
-	| vx vy vz vw | * | m10 m11 m12 m13 | = | vx*m01 + vy*m11 + vz*m21 + vw * m31 |
-	                  | m20 m21 m22 m23 |   | vx*m02 + vy*m12 + vz*m22 + vw * m32 |
-	                  | m30 m31 m32 m33 |   | vx*m02 + vy*m13 + vz*m23 + vw * m33 |
-
-
-	| a00 a01 a02 a03 |   | b00 b01 b02 b03 |   | a00*b00 + a01*b10 + a02*b20 + a03*b30   a00*b01 + a01*b11 + a02*b21 + a03*b31   a00*b02 + a01*b12 + a02*b22 + a03*b32   a00*b03 + a01*b13 + a02*b23 + a03*b33 |
-	| a10 a11 a12 a13 | * | b10 b11 b12 b13 | = | a10*b00 + a11*b10 + a12*b20 + a13*b30   a10*b01 + a11*b11 + a12*b21 + a13*b31   a00*b02 + a11*b12 + a02*b22 + a13*b32   a10*b03 + a11*b13 + a12*b23 + a13*b33 |
-	| a20 a21 a22 a23 |   | b20 b21 b22 b23 |   | a20*b00 + a21*b10 + a22*b20 + a23*b30   a20*b01 + a21*b11 + a22*b21 + a23*b31   a00*b02 + a21*b12 + a02*b22 + a23*b32   a20*b03 + a21*b13 + a22*b23 + a23*b33 |
-	| a30 a31 a32 a33 |   | b30 b31 b32 b33 |   | a30*b00 + a31*b10 + a32*b20 + a33*b30   a30*b01 + a31*b11 + a32*b21 + a33*b31   a00*b02 + a31*b12 + a02*b22 + a33*b32   a30*b03 + a31*b13 + a32*b23 + a33*b33 |
-
-
-	c00 = a00*b00 + a01*b10 + a02*b20 + a03*b30
-	c01 = a00*b01 + a01*b11 + a02*b21 + a03*b31
-	c02 = a00*b02 + a01*b12 + a02*b22 + a03*b32
-	c03 = a00*b03 + a01*b13 + a02*b23 + a03*b33
-
-	c10 = a10*b00 + a11*b10 + a12*b20 + a13*b30
-	c11 = a10*b01 + a11*b11 + a12*b21 + a13*b31
-	c12 = a00*b02 + a11*b12 + a02*b22 + a13*b32
-	c13 = a10*b03 + a11*b13 + a12*b23 + a13*b33
-
-	c20 = a20*b00 + a21*b10 + a22*b20 + a23*b30
-	c21 = a20*b01 + a21*b11 + a22*b21 + a23*b31
-	c22 = a00*b02 + a21*b12 + a02*b22 + a23*b32
-	c23 = a20*b03 + a21*b13 + a22*b23 + a23*b33
-
-	c30 = a30*b00 + a31*b10 + a32*b20 + a33*b30
-	c31 = a30*b01 + a31*b11 + a32*b21 + a33*b31
-	c32 = a00*b02 + a31*b12 + a02*b22 + a33*b32
-	c33 = a30*b03 + a31*b13 + a32*b23 + a33*b33
-
-*/
-
 Matrix4 identity_matrix(void)
 {
 	Matrix4 m;

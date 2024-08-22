@@ -71,6 +71,8 @@ void main()
 
     vec3 color = vec3(0);
 
+	float shadow = shadow_factor(frag_pos_light_space);
+
     // Direct lighting
     {
         float D = distribGGX(NoH, roughness);
@@ -81,7 +83,7 @@ void main()
 
         vec3 diffuse = (1 - F) * (1 - metallic) * baseColor / PI;
 
-        color = (diffuse + specular) * lightColor * light_intensity * NoL;
+        color = (1 - shadow) * (diffuse + specular) * lightColor * light_intensity * NoL;
     }
 
     // Ambient lighting with IBL
@@ -104,8 +106,6 @@ void main()
 		float ao = 1;
 		ambient = ((1 - F) * (1 - metallic) * diffuse + specular) * ao;
     }
-
-	float shadow = shadow_factor(frag_pos_light_space);
 
 	color = color + ambient;
 

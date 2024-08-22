@@ -1,7 +1,11 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "utils.h"
 #include "mesh.h"
+
+#define TINYOBJ_LOADER_C_IMPLEMENTATION
+#include "tinyobj_loader_c.h"
 
 void append_vertex(VertexArray *array, Vertex v)
 {
@@ -150,7 +154,7 @@ VertexArray make_sphere_mesh_2(float radius, int num_segms, bool fake_normals)
 
 VertexArray make_sphere_mesh(float radius)
 {
-	return make_sphere_mesh_2(radius, 64, true);
+	return make_sphere_mesh_2(radius, 32, true);
 }
 
 VertexArray make_cube_mesh(void)
@@ -216,4 +220,126 @@ VertexArray make_cube_mesh(void)
    }
 
    return result;
+}
+
+static void
+get_file_data_callback(void *context, const char *filename, 
+	const int is_mtl, const char *obj_filename, char **data, size_t *len)
+{
+	(void) context;
+
+	if (filename == NULL) {
+		fprintf(stderr, "null filename\n");
+		(*data) = NULL;
+		(*len) = 0;
+		return;
+	}
+
+	size_t data_len = 0;
+
+	printf("Reading file '%s'\n", filename);
+	*data = load_file(filename, &data_len);
+	(*len) = data_len;
+
+	char **free_me = context;
+	if (*free_me == NULL) *free_me = *data;
+}
+
+bool load_mesh_from_file(const char *file, VertexArray *result)
+{
+
+	tinyobj_attrib_t attrib;
+
+	tinyobj_shape_t* shapes = NULL;
+	size_t num_shapes;
+
+	tinyobj_material_t* materials = NULL;
+	size_t num_materials;
+
+	char *free_me = NULL;
+
+	unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
+	int ret = tinyobj_parse_obj(&attrib, &shapes, &num_shapes, &materials, &num_materials, file, get_file_data_callback, &free_me, flags);
+	if (ret != TINYOBJ_SUCCESS) {
+		if (free_me) free(free_me);
+		printf("Failed loading '%s'\n", file);
+		return false;
+	}
+
+	*result = (VertexArray) {0, 0, 0};
+
+	size_t face_offset = 0;
+	for (int i = 0; i < (int) attrib.num_face_num_verts; i++) {
+
+		assert(attrib.face_num_verts[i] % 3 == 0); /* assume all triangle faces. */
+		for (size_t f = 0; f < (size_t)attrib.face_num_verts[i] / 3; f++) {
+
+			tinyobj_vertex_index_t idx0 = attrib.faces[face_offset + f * 3 + 0];
+			tinyobj_vertex_index_t idx1 = attrib.faces[face_offset + f * 3 + 1];
+			tinyobj_vertex_index_t idx2 = attrib.faces[face_offset + f * 3 + 2];
+
+			Vertex v0;
+			Vertex v1;
+			Vertex v2;
+
+			/*
+			 * Positions
+			 */
+
+			v0.x = attrib.vertices[idx0.v_idx * 3 + 0];
+			v0.y = attrib.vertices[idx0.v_idx * 3 + 1];
+			v0.z = attrib.vertices[idx0.v_idx * 3 + 2];
+
+			v1.x = attrib.vertices[idx1.v_idx * 3 + 0];
+			v1.y = attrib.vertices[idx1.v_idx * 3 + 1];
+			v1.z = attrib.vertices[idx1.v_idx * 3 + 2];
+
+			v2.x = attrib.vertices[idx2.v_idx * 3 + 0];
+			v2.y = attrib.vertices[idx2.v_idx * 3 + 1];
+			v2.z = attrib.vertices[idx2.v_idx * 3 + 2];
+
+			/*
+			 * Normals
+			 */
+
+			v0.nx = attrib.normals[idx0.vn_idx * 3 + 0];
+			v0.ny = attrib.normals[idx0.vn_idx * 3 + 1];
+			v0.nz = attrib.normals[idx0.vn_idx * 3 + 2];
+
+			v1.nx = attrib.normals[idx1.vn_idx * 3 + 0];
+			v1.ny = attrib.normals[idx1.vn_idx * 3 + 1];
+			v1.nz = attrib.normals[idx1.vn_idx * 3 + 2];
+
+			v2.nx = attrib.normals[idx2.vn_idx * 3 + 0];
+			v2.ny = attrib.normals[idx2.vn_idx * 3 + 1];
+			v2.nz = attrib.normals[idx2.vn_idx * 3 + 2];
+
+			/*
+			 * Texture coordinates
+			 */
+
+			v0.tx = attrib.normals[idx0.vt_idx * 2 + 0];
+			v0.ty = attrib.normals[idx0.vt_idx * 2 + 1];
+
+			v1.tx = attrib.normals[idx1.vt_idx * 2 + 0];
+			v1.ty = attrib.normals[idx1.vt_idx * 2 + 1];
+
+			v2.tx = attrib.normals[idx2.vt_idx * 2 + 0];
+			v2.ty = attrib.normals[idx2.vt_idx * 2 + 1];
+
+			append_vertex(result, v0);
+			append_vertex(result, v1);
+			append_vertex(result, v2);
+		}
+
+		face_offset += (size_t)attrib.face_num_verts[i];
+	}
+
+	if (free_me)
+		free(free_me);
+
+	tinyobj_attrib_free(&attrib);
+	tinyobj_shapes_free(shapes, num_shapes);
+	tinyobj_materials_free(materials, num_materials);
+	return true;
 }
