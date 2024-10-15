@@ -11,23 +11,23 @@
 
 static void error_callback(int error, const char* description)
 {
-    fprintf(stderr, "Error: %s\n", description);
+	fprintf(stderr, "Error: %s\n", description);
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    glViewport(0, 0, width, height);
+	glViewport(0, 0, width, height);
 }
 
 void cursor_pos_callback(GLFWwindow *window, double x, double y)
 {
-    rotate_camera(x, y);
+	rotate_camera(x, y);
 }
 
 typedef enum {
@@ -41,85 +41,85 @@ typedef enum {
 } PieceType;
 
 typedef struct {
-    bool is_black;
-    PieceType type;
+	bool is_black;
+	PieceType type;
 } Piece;
 
 typedef struct {
-    Piece pieces[8][8];
+	Piece pieces[8][8];
 } Board;
 
 void init_board(Board *board)
 {
-    for (int i = 0; i < 8; i++)
-        for (int j = 0; j < 8; j++) {
-            board->pieces[i][j] = (Piece) {false, PIECE_VOID};
-        }
-    for (int i = 0; i < 8; i++) {
-        board->pieces[i][1] = (Piece) {true, PIECE_PAWN};
-        board->pieces[i][6] = (Piece) {false, PIECE_PAWN};
-    }
+	for (int i = 0; i < 8; i++)
+		for (int j = 0; j < 8; j++) {
+			board->pieces[i][j] = (Piece) {false, PIECE_VOID};
+		}
+	for (int i = 0; i < 8; i++) {
+		board->pieces[i][1] = (Piece) {true, PIECE_PAWN};
+		board->pieces[i][6] = (Piece) {false, PIECE_PAWN};
+	}
 
-    board->pieces[3][0] = (Piece) {true, PIECE_KING};
-    board->pieces[3][7] = (Piece) {false, PIECE_KING};
-    board->pieces[4][0] = (Piece) {true, PIECE_QUEEN};
-    board->pieces[4][7] = (Piece) {false, PIECE_QUEEN};
+	board->pieces[3][0] = (Piece) {true, PIECE_KING};
+	board->pieces[3][7] = (Piece) {false, PIECE_KING};
+	board->pieces[4][0] = (Piece) {true, PIECE_QUEEN};
+	board->pieces[4][7] = (Piece) {false, PIECE_QUEEN};
 
-    board->pieces[2][7] = (Piece) {false, PIECE_BISHOP};
-    board->pieces[5][7] = (Piece) {false, PIECE_BISHOP};
+	board->pieces[2][7] = (Piece) {false, PIECE_BISHOP};
+	board->pieces[5][7] = (Piece) {false, PIECE_BISHOP};
 
-    board->pieces[2][0] = (Piece) {true, PIECE_BISHOP};
-    board->pieces[5][0] = (Piece) {true, PIECE_BISHOP};
+	board->pieces[2][0] = (Piece) {true, PIECE_BISHOP};
+	board->pieces[5][0] = (Piece) {true, PIECE_BISHOP};
 
-    board->pieces[1][7] = (Piece) {false, PIECE_KNIGHT};
-    board->pieces[6][7] = (Piece) {false, PIECE_KNIGHT};
+	board->pieces[1][7] = (Piece) {false, PIECE_KNIGHT};
+	board->pieces[6][7] = (Piece) {false, PIECE_KNIGHT};
 
-    board->pieces[1][0] = (Piece) {true, PIECE_KNIGHT};
-    board->pieces[6][0] = (Piece) {true, PIECE_KNIGHT};
+	board->pieces[1][0] = (Piece) {true, PIECE_KNIGHT};
+	board->pieces[6][0] = (Piece) {true, PIECE_KNIGHT};
 
-    board->pieces[0][0] = (Piece) {true, PIECE_ROOK};
-    board->pieces[7][0] = (Piece) {true, PIECE_ROOK};
+	board->pieces[0][0] = (Piece) {true, PIECE_ROOK};
+	board->pieces[7][0] = (Piece) {true, PIECE_ROOK};
 
-    board->pieces[0][7] = (Piece) {false, PIECE_ROOK};
-    board->pieces[7][7] = (Piece) {false, PIECE_ROOK};
+	board->pieces[0][7] = (Piece) {false, PIECE_ROOK};
+	board->pieces[7][7] = (Piece) {false, PIECE_ROOK};
 
-    /*
-    board->pieces[3][4] = {false, PIECE_KING};
-    board->pieces[4][5] = {false, PIECE_PAWN};
-    board->pieces[4][6] = {false, PIECE_PAWN};
-    */
+	/*
+	board->pieces[3][4] = {false, PIECE_KING};
+	board->pieces[4][5] = {false, PIECE_PAWN};
+	board->pieces[4][6] = {false, PIECE_PAWN};
+	*/
 }
 
 int main(void)
 {
-    glfwSetErrorCallback(error_callback);
+	glfwSetErrorCallback(error_callback);
 
-    if (!glfwInit())
-        return -1;
+	if (!glfwInit())
+		return -1;
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(2*640, 2*480, "3D Chess", NULL, NULL);
-    if (!window) {
-        glfwTerminate();
-        return -1;
-    }
+	GLFWwindow *window = glfwCreateWindow(2*640, 2*480, "3D Chess", NULL, NULL);
+	if (!window) {
+		glfwTerminate();
+		return -1;
+	}
 
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, cursor_pos_callback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetKeyCallback(window, key_callback);
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetCursorPosCallback(window, cursor_pos_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    glfwMakeContextCurrent(window);
+	glfwMakeContextCurrent(window);
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        printf("Failed to initialize GLAD\n");
-        return -1;
-    }
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+		printf("Failed to initialize GLAD\n");
+		return -1;
+	}
 
-    glfwSwapInterval(1);
+	glfwSwapInterval(1);
 
 	init_graphics(window);
 
@@ -139,7 +139,7 @@ int main(void)
 			printf("Couldn't load model\n");
 			piece_models[i] = MODEL_SPHERE;
 		}
-	
+
 	Board board;
 	init_board(&board);
 
@@ -174,12 +174,24 @@ int main(void)
 				draw_model(piece_models[board.pieces[i][j].type], (Vector3) {cell_w * (i + 0.5), 0, cell_d * (j + 0.5)}, (Vector3) {1, 1, 1}, (Vector3) {0, rotation, 0}, piece_material);
 			}
 
-		update_graphics();
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+		{
+			Material material = {.baseColor={1, 1, 1}, .metallic=1.0, .perceptualRoughness=0, .reflectance=0};
+			Vector3 pos =  {cell_w * (4 + 0.5), 0, cell_d * (4 + 0.5)};
+			draw_model(piece_models[PIECE_KING], pos, (Vector3) {1, 1, 1}, (Vector3) {0, 0, 0}, material);
+		}
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    return 0;
+		{
+			Material material = {.baseColor={0, 0, 0}, .metallic=1.0, .perceptualRoughness=0, .reflectance=0};
+			Vector3 pos =  {cell_w * (5 + 0.5), 0, cell_d * (4 + 0.5)};
+			draw_model(piece_models[PIECE_KING], pos, (Vector3) {1, 1, 1}, (Vector3) {0, 0, 0}, material);
+		}
+
+		update_graphics();
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	glfwDestroyWindow(window);
+	glfwTerminate();
+	return 0;
 }

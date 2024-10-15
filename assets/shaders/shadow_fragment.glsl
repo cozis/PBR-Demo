@@ -2,6 +2,6 @@
 
 void main()
 {
-    // This is implicit:
-    //   gl_FragDepth = gl_FragCoord.z;
+	// This is implicit:
+	//   gl_FragDepth = gl_FragCoord.z;
 }
